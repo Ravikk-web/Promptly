@@ -4,6 +4,7 @@ import { analyzePrompt } from './services/geminiService';
 import { PromptAnalysis, LoadingState, HistoryItem } from './types';
 import FeedbackDisplay from './components/FeedbackDisplay';
 import HistorySidebar from './components/HistorySidebar';
+import BackgroundAnimation from './components/BackgroundAnimation';
 
 const App: React.FC = () => {
   const [inputPrompt, setInputPrompt] = useState('');
@@ -81,8 +82,11 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-800 via-slate-900 to-slate-950 text-slate-50 selection:bg-purple-500/30 selection:text-purple-200">
+    <div className="min-h-screen bg-slate-900 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-800 via-slate-900 to-slate-950 text-slate-50 selection:bg-purple-500/30 selection:text-purple-200 relative overflow-x-hidden">
       
+      {/* Animated Background */}
+      <BackgroundAnimation />
+
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/5 bg-slate-900/80 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
@@ -123,8 +127,8 @@ const App: React.FC = () => {
         onClear={handleClearHistory}
       />
 
-      {/* Main Content */}
-      <main className="pt-24 pb-12 px-4 max-w-7xl mx-auto">
+      {/* Main Content - Added relative and z-10 to sit above canvas */}
+      <main className="pt-24 pb-12 px-4 max-w-7xl mx-auto relative z-10">
         
         {/* Hero Section */}
         <div className={`transition-all duration-700 ease-in-out ${analysis ? 'opacity-0 h-0 overflow-hidden py-0' : 'opacity-100 py-12'}`}>
@@ -205,7 +209,7 @@ const App: React.FC = () => {
       </main>
 
        {/* Footer */}
-       <footer className="py-8 text-center text-slate-600 text-sm">
+       <footer className="py-8 text-center text-slate-600 text-sm relative z-10">
         <p>© {new Date().getFullYear()} PROMPTLY. Powered by Google Gemini.</p>
       </footer>
     </div>
