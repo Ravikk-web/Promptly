@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, Save, AlertTriangle, Check, Server, Key, Globe, Box } from 'lucide-react';
+import { X, Save, AlertTriangle, Check, Server, Key, Globe, Box, Loader2, Wifi } from 'lucide-react';
 import { AppSettings, AIProvider } from '../types';
 
 interface SettingsModalProps {
@@ -15,9 +15,16 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings
   const [activeTab, setActiveTab] = useState<AIProvider>(settings.provider);
   const [isSaved, setIsSaved] = useState(false);
 
+  // Validation State
+  const [isValidating, setIsValidating] = useState(false);
+  const [validationStatus, setValidationStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [validationMsg, setValidationMsg] = useState('');
+
   useEffect(() => {
     setLocalSettings(settings);
     setActiveTab(settings.provider);
+    setValidationStatus('idle');
+    setValidationMsg('');
   }, [settings, isOpen]);
 
   if (!isOpen) return null;
@@ -36,6 +43,56 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings
 
   const handleInputChange = (key: keyof AppSettings, value: string) => {
     setLocalSettings(prev => ({ ...prev, [key]: value }));
+    // Reset validation when url changes
+    if (key === 'localBaseUrl') {
+        setValidationStatus('idle');
+        setValidationMsg('');
+    }
+  };
+
+  const handleTestConnection = async () => {
+    if (!localSettings.localBaseUrl) return;
+
+    setIsValidating(true);
+    setValidationStatus('idle');
+    setValidationMsg('');
+    
+    // Remove trailing slash
+    let baseUrl = localSettings.localBaseUrl.replace(/\/$/, ''); 
+    
+    // Construct check URL. 
+    // The service appends /v1/chat/completions, so we expect the input to be the root or base.
+    // Standard LM Studio / OpenAI endpoints usually expose /v1/models.
+    
+    let checkUrl = `${baseUrl}/v1/models`;
+    
+    // If the user already included /v1, we shouldn't double it (e.g. localhost:1234/v1/v1/models)
+    if (baseUrl.endsWith('/v1')) {
+        checkUrl = `${baseUrl}/models`;
+    }
+
+    try {
+        const response = await fetch(checkUrl, {
+             method: 'GET',
+             headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (response.ok) {
+             setValidationStatus('success');
+             setValidationMsg('Success! Handshake with server confirmed.');
+        } else {
+             throw new Error(`Server responded with ${response.status}`);
+        }
+    } catch (error: any) {
+        setValidationStatus('error');
+        if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+             setValidationMsg('Connection refused. Ensure server is running and CORS is ON.');
+        } else {
+             setValidationMsg(error.message || 'Failed to connect.');
+        }
+    } finally {
+        setIsValidating(false);
+    }
   };
 
   return (
@@ -195,7 +252,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings
                   <AlertTriangle className="w-4 h-4 text-yellow-400 flex-shrink-0 mt-0.5" />
                   <p className="text-yellow-200/90 text-xs">
                     <span className="font-bold block mb-0.5">Connection Error?</span>
-                    Ensure your local server (e.g., LM Studio) has <strong>CORS enabled</strong> in its settings to allow requests from the browser.
+                    Ensure your local server (e.g., LM Studio) has <strong>CORS enabled</strong> in its settings.
                   </p>
                 </div>
 
@@ -203,13 +260,33 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings
                   <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
                     Base URL
                   </label>
-                  <input 
-                    type="text"
-                    value={localSettings.localBaseUrl}
-                    onChange={(e) => handleInputChange('localBaseUrl', e.target.value)}
-                    placeholder="http://localhost:1234/v1"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg py-2 px-4 text-sm text-white placeholder:text-slate-600 focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all font-mono"
-                  />
+                  <div className="flex gap-2">
+                    <input 
+                        type="text"
+                        value={localSettings.localBaseUrl}
+                        onChange={(e) => handleInputChange('localBaseUrl', e.target.value)}
+                        placeholder="http://localhost:1234"
+                        className="flex-1 bg-slate-950 border border-slate-800 rounded-lg py-2 px-4 text-sm text-white placeholder:text-slate-600 focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all font-mono"
+                    />
+                    <button
+                        onClick={handleTestConnection}
+                        disabled={isValidating || !localSettings.localBaseUrl}
+                        className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-w-[3rem]"
+                        title="Validate Connection"
+                    >
+                        {isValidating ? <Loader2 className="w-4 h-4 animate-spin text-purple-400" /> : <Wifi className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  {/* Validation Message */}
+                  {validationStatus !== 'idle' && (
+                      <div className={`mt-2 text-xs flex items-center gap-2 animate-in fade-in duration-300 ${validationStatus === 'success' ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {validationStatus === 'success' ? <Check className="w-3 h-3" /> : <AlertTriangle className="w-3 h-3" />}
+                          <span>{validationMsg}</span>
+                      </div>
+                  )}
+                  <p className="text-[10px] text-slate-600 mt-1 ml-1">
+                    Example: http://localhost:1234 (without /v1)
+                  </p>
                 </div>
 
                 <div>
