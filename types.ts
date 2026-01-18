@@ -1,3 +1,4 @@
+
 export interface Segment {
   text: string;
   type: 'neutral' | 'bad' | 'good' | 'highlight';
@@ -24,4 +25,19 @@ export enum LoadingState {
   LOADING = 'LOADING',
   SUCCESS = 'SUCCESS',
   ERROR = 'ERROR'
+}
+
+export enum AIProvider {
+  GOOGLE = 'google',
+  OPENAI = 'openai',
+  CLAUDE = 'claude',
+  LOCAL = 'local' // LM Studio, Ollama, etc.
+}
+
+export interface AppSettings {
+  provider: AIProvider;
+  openAIKey: string;
+  claudeKey: string;
+  localBaseUrl: string;
+  localModelName: string;
 }

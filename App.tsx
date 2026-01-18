@@ -1,10 +1,20 @@
+
 import React, { useState, useEffect } from 'react';
-import { Sparkles, ArrowRight, Loader2, History } from 'lucide-react';
+import { Sparkles, ArrowRight, Loader2, History, Settings } from 'lucide-react';
 import { analyzePrompt } from './services/geminiService';
-import { PromptAnalysis, LoadingState, HistoryItem } from './types';
+import { PromptAnalysis, LoadingState, HistoryItem, AppSettings, AIProvider } from './types';
 import FeedbackDisplay from './components/FeedbackDisplay';
 import HistorySidebar from './components/HistorySidebar';
 import BackgroundAnimation from './components/BackgroundAnimation';
+import SettingsModal from './components/SettingsModal';
+
+const DEFAULT_SETTINGS: AppSettings = {
+  provider: AIProvider.GOOGLE,
+  openAIKey: '',
+  claudeKey: '',
+  localBaseUrl: 'http://localhost:1234',
+  localModelName: 'local-model'
+};
 
 const App: React.FC = () => {
   const [inputPrompt, setInputPrompt] = useState('');
@@ -12,21 +22,41 @@ const App: React.FC = () => {
   const [status, setStatus] = useState<LoadingState>(LoadingState.IDLE);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   
+  // Settings State
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
+
   // History State
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
-  // Load history from local storage on mount
+  // Load data from local storage on mount
   useEffect(() => {
+    // Load History
     const savedHistory = localStorage.getItem('promtify_history');
     if (savedHistory) {
       try {
         setHistory(JSON.parse(savedHistory));
       } catch (error) {
-        console.error("Failed to parse history from local storage:", error);
+        console.error("Failed to parse history:", error);
+      }
+    }
+
+    // Load Settings
+    const savedSettings = localStorage.getItem('promtify_settings');
+    if (savedSettings) {
+      try {
+        setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(savedSettings) });
+      } catch (error) {
+        console.error("Failed to parse settings:", error);
       }
     }
   }, []);
+
+  const handleSaveSettings = (newSettings: AppSettings) => {
+    setSettings(newSettings);
+    localStorage.setItem('promtify_settings', JSON.stringify(newSettings));
+  };
 
   const saveToHistory = (prompt: string, result: PromptAnalysis) => {
     const newItem: HistoryItem = {
@@ -64,14 +94,14 @@ const App: React.FC = () => {
     setErrorMsg(null);
 
     try {
-      const result = await analyzePrompt(inputPrompt);
+      const result = await analyzePrompt(inputPrompt, settings);
       setAnalysis(result);
       setStatus(LoadingState.SUCCESS);
       saveToHistory(inputPrompt, result);
     } catch (error: any) {
       console.error(error);
       setStatus(LoadingState.ERROR);
-      setErrorMsg("Something went wrong with the AI service. Please try again.");
+      setErrorMsg(error.message || "Something went wrong with the AI service. Check your settings and try again.");
     }
   };
 
@@ -103,20 +133,38 @@ const App: React.FC = () => {
             </span>
           </div>
           
-          <button 
-            onClick={() => setIsHistoryOpen(true)}
-            className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors px-3 py-2 rounded-lg hover:bg-slate-800/50"
-          >
-            <History className="w-5 h-5" />
-            <span className="hidden sm:inline font-medium">History</span>
-            {history.length > 0 && (
-              <span className="bg-slate-700 text-slate-300 text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center">
-                {history.length}
-              </span>
-            )}
-          </button>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => setIsSettingsOpen(true)}
+              className="p-2 text-slate-400 hover:text-white transition-colors rounded-lg hover:bg-slate-800/50"
+              title="Settings"
+            >
+              <Settings className="w-5 h-5" />
+            </button>
+
+            <button 
+              onClick={() => setIsHistoryOpen(true)}
+              className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors px-3 py-2 rounded-lg hover:bg-slate-800/50"
+            >
+              <History className="w-5 h-5" />
+              <span className="hidden sm:inline font-medium">History</span>
+              {history.length > 0 && (
+                <span className="bg-slate-700 text-slate-300 text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center">
+                  {history.length}
+                </span>
+              )}
+            </button>
+          </div>
         </div>
       </header>
+
+      {/* Settings Modal */}
+      <SettingsModal 
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        settings={settings}
+        onSave={handleSaveSettings}
+      />
 
       {/* History Sidebar */}
       <HistorySidebar 
@@ -182,6 +230,13 @@ const App: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+          
+          {/* Active Provider Badge */}
+          <div className="flex justify-center mt-4">
+             <span className="text-xs font-medium text-slate-500 bg-slate-900/50 px-3 py-1 rounded-full border border-slate-800">
+               Using: <span className="text-slate-300 capitalize">{settings.provider}</span>
+             </span>
           </div>
         </div>
 
