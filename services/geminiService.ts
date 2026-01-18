@@ -120,32 +120,41 @@ const analyzeWithGoogle = async (promptText: string): Promise<PromptAnalysis> =>
 // --- OPENAI / LOCAL IMPLEMENTATION (Compatible APIs) ---
 const analyzeWithOpenAI = async (promptText: string, apiKey: string) => {
   if (!apiKey) throw new Error("OpenAI API Key is required.");
-  return callOpenAICompatible("https://api.openai.com/v1/chat/completions", apiKey, "gpt-4o", promptText);
+  // OpenAI supports strict json_object mode
+  return callOpenAICompatible("https://api.openai.com/v1/chat/completions", apiKey, "gpt-4o", promptText, true);
 };
 
 const analyzeWithLocal = async (promptText: string, baseUrl: string, model: string) => {
   if (!baseUrl) throw new Error("Local API URL is required.");
   // Normalize URL
   const url = baseUrl.endsWith('/') ? `${baseUrl}v1/chat/completions` : `${baseUrl}/v1/chat/completions`;
-  return callOpenAICompatible(url, "not-needed", model || "local-model", promptText);
+  // Local models (like LM Studio) may not support 'json_object' response_format or require 'json_schema'.
+  // To stay compatible with the widest range of local servers/models, we disable the strict flag
+  // and rely on the system prompt + robust parsing.
+  return callOpenAICompatible(url, "not-needed", model || "local-model", promptText, false);
 };
 
-const callOpenAICompatible = async (url: string, apiKey: string, model: string, promptText: string): Promise<PromptAnalysis> => {
+const callOpenAICompatible = async (url: string, apiKey: string, model: string, promptText: string, useJsonMode: boolean): Promise<PromptAnalysis> => {
   try {
+    const body: any = {
+      model: model,
+      messages: [
+        { role: "system", content: SYSTEM_INSTRUCTION + JSON_STRUCTURE_HINT },
+        { role: "user", content: `Analyze this prompt: "${promptText}"` }
+      ]
+    };
+
+    if (useJsonMode) {
+      body.response_format = { type: "json_object" };
+    }
+
     const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`
       },
-      body: JSON.stringify({
-        model: model,
-        messages: [
-          { role: "system", content: SYSTEM_INSTRUCTION + JSON_STRUCTURE_HINT },
-          { role: "user", content: `Analyze this prompt: "${promptText}"` }
-        ],
-        response_format: { type: "json_object" }
-      })
+      body: JSON.stringify(body)
     });
 
     if (!response.ok) {
@@ -154,9 +163,25 @@ const callOpenAICompatible = async (url: string, apiKey: string, model: string, 
     }
 
     const data = await response.json();
-    const content = data.choices[0]?.message?.content;
+    let content = data.choices[0]?.message?.content;
     if (!content) throw new Error("Empty response from model.");
     
+    // Robust Parsing Logic for Local Models
+    
+    // 1. Clean <think> tags (Common in DeepSeek/R1 models)
+    content = content.replace(/<think>[\s\S]*?<\/think>/g, '');
+
+    // 2. Clean Markdown code blocks if the model wraps the JSON
+    content = content.replace(/```json\n?|\n?```/g, '');
+    
+    // 3. Extract JSON object by finding the first '{' and last '}'
+    const firstBrace = content.indexOf('{');
+    const lastBrace = content.lastIndexOf('}');
+    
+    if (firstBrace !== -1 && lastBrace !== -1) {
+      content = content.substring(firstBrace, lastBrace + 1);
+    }
+
     return JSON.parse(content);
   } catch (error: any) {
     console.error("Provider API Error:", error);
