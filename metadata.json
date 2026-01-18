@@ -1,0 +1,5 @@
+{
+  "name": "PROMPTLY",
+  "description": "An AI-powered assistant to analyze, grade, and improve your prompting skills using Google Gemini.",
+  "requestFramePermissions": []
+}
