@@ -158,9 +158,12 @@ const callOpenAICompatible = async (url: string, apiKey: string, model: string, 
     if (!content) throw new Error("Empty response from model.");
     
     return JSON.parse(content);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Provider API Error:", error);
-    throw new Error("Failed to connect to AI Provider. Check your settings and keys.");
+    if (error instanceof TypeError && error.message.includes("Failed to fetch")) {
+         throw new Error("Connection failed. Ensure the local server is running and 'CORS' is enabled in its settings (common issue with LM Studio/Ollama).");
+    }
+    throw new Error(error.message || "Failed to connect to AI Provider. Check your settings and keys.");
   }
 };
 

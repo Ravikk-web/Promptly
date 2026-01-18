@@ -189,6 +189,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings
                     </p>
                   </div>
                 </div>
+                
+                {/* CORS Hint for Local */}
+                <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-3 flex gap-2">
+                  <AlertTriangle className="w-4 h-4 text-yellow-400 flex-shrink-0 mt-0.5" />
+                  <p className="text-yellow-200/90 text-xs">
+                    <span className="font-bold block mb-0.5">Connection Error?</span>
+                    Ensure your local server (e.g., LM Studio) has <strong>CORS enabled</strong> in its settings to allow requests from the browser.
+                  </p>
+                </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
