@@ -108,6 +108,8 @@ const App: React.FC = () => {
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && e.ctrlKey) {
+      // Trigger submit manually
+      e.preventDefault();
       handleSubmit(e as unknown as React.FormEvent);
     }
   };
@@ -197,6 +199,8 @@ const App: React.FC = () => {
           <div className="bg-slate-800/80 rounded-2xl p-2 md:p-3 shadow-2xl ring-1 ring-white/10 backdrop-blur-xl">
             <form onSubmit={handleSubmit} className="relative">
               <textarea
+                id="prompt-input"
+                aria-label="Enter your prompt for analysis"
                 value={inputPrompt}
                 onChange={(e) => setInputPrompt(e.target.value)}
                 onKeyDown={handleKeyDown}

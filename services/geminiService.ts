@@ -57,6 +57,32 @@ const analysisSchema: Schema = {
   required: ["score", "summary", "originalSegments", "improvedSegments", "tips"]
 };
 
+// --- HELPER: ROBUST JSON PARSER ---
+const parseAIResponse = (content: string): PromptAnalysis => {
+  if (!content) throw new Error("Empty response from model.");
+
+  // 1. Clean <think> tags (Common in DeepSeek/R1 models)
+  content = content.replace(/<think>[\s\S]*?<\/think>/g, '');
+
+  // 2. Clean Markdown code blocks if the model wraps the JSON
+  content = content.replace(/```json\n?|\n?```/g, '');
+
+  // 3. Extract JSON object by finding the first '{' and last '}'
+  const firstBrace = content.indexOf('{');
+  const lastBrace = content.lastIndexOf('}');
+
+  if (firstBrace !== -1 && lastBrace !== -1) {
+    content = content.substring(firstBrace, lastBrace + 1);
+  }
+
+  try {
+    return JSON.parse(content) as PromptAnalysis;
+  } catch (error) {
+    console.error("JSON Parse Error:", error);
+    throw new Error("Failed to parse AI response. The model might have returned invalid JSON.");
+  }
+};
+
 // --- SYSTEM PROMPT ---
 const SYSTEM_INSTRUCTION = `You are an expert AI Prompt Engineer. Your goal is to teach users how to write better prompts. 
 Be critical but constructive. When segmenting text, ensure the full original text and full improved text can be reconstructed by joining the segments.
@@ -93,7 +119,8 @@ export const analyzePrompt = async (promptText: string, settings?: AppSettings):
 
 // --- GOOGLE IMPLEMENTATION ---
 const analyzeWithGoogle = async (promptText: string, userKey?: string): Promise<PromptAnalysis> => {
-  const apiKey = userKey || process.env.API_KEY;
+  // Use import.meta.env for Vite compatibility, fallback to process.env safely
+  const apiKey = userKey || import.meta.env.VITE_API_KEY || (typeof process !== 'undefined' ? process.env.API_KEY : undefined);
   if (!apiKey) throw new Error("Google API Key is missing. Please configure it in settings.");
 
   const ai = new GoogleGenAI({ apiKey });
@@ -111,7 +138,7 @@ const analyzeWithGoogle = async (promptText: string, userKey?: string): Promise<
 
     const text = response.text;
     if (!text) throw new Error("No response from Gemini.");
-    return JSON.parse(text) as PromptAnalysis;
+    return parseAIResponse(text);
   } catch (error) {
     console.error("Gemini API Error:", error);
     throw error;
@@ -167,23 +194,7 @@ const callOpenAICompatible = async (url: string, apiKey: string, model: string, 
     let content = data.choices[0]?.message?.content;
     if (!content) throw new Error("Empty response from model.");
 
-    // Robust Parsing Logic for Local Models
-
-    // 1. Clean <think> tags (Common in DeepSeek/R1 models)
-    content = content.replace(/<think>[\s\S]*?<\/think>/g, '');
-
-    // 2. Clean Markdown code blocks if the model wraps the JSON
-    content = content.replace(/```json\n?|\n?```/g, '');
-
-    // 3. Extract JSON object by finding the first '{' and last '}'
-    const firstBrace = content.indexOf('{');
-    const lastBrace = content.lastIndexOf('}');
-
-    if (firstBrace !== -1 && lastBrace !== -1) {
-      content = content.substring(firstBrace, lastBrace + 1);
-    }
-
-    return JSON.parse(content);
+    return parseAIResponse(content);
   } catch (error: any) {
     console.error("Provider API Error:", error);
     if (error instanceof TypeError && error.message.includes("Failed to fetch")) {
@@ -225,12 +236,7 @@ const analyzeWithClaude = async (promptText: string, apiKey: string): Promise<Pr
     }
 
     const data = await response.json();
-    const content = data.content[0]?.text;
-    if (!content) throw new Error("Empty response from Claude.");
-
-    // Claude might wrap JSON in markdown, clean it
-    const cleanJson = content.replace(/```json\n?|\n?```/g, '');
-    return JSON.parse(cleanJson);
+    return parseAIResponse(data.content[0]?.text);
 
   } catch (error: any) {
     console.error("Claude API Error:", error);
@@ -242,9 +248,10 @@ const analyzeWithClaude = async (promptText: string, apiKey: string): Promise<Pr
 export const getStructuredJsonPrompt = async (promptText: string): Promise<string> => {
   // This function defaults to Google for simplicity, or could handle settings if passed
   // For now, we keep it using the environment key for stability
-  if (!process.env.API_KEY) throw new Error("API Key is missing.");
+  const apiKey = import.meta.env.VITE_API_KEY || process.env.API_KEY;
+  if (!apiKey) throw new Error("API Key is missing.");
 
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey });
   const response = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
     contents: `Convert to JSON: "${promptText}"`,
