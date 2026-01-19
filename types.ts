@@ -38,6 +38,7 @@ export interface AppSettings {
   provider: AIProvider;
   openAIKey: string;
   claudeKey: string;
+  googleKey: string;
   localBaseUrl: string;
   localModelName: string;
 }

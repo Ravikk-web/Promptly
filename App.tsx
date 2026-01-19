@@ -12,6 +12,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   provider: AIProvider.GOOGLE,
   openAIKey: '',
   claudeKey: '',
+  googleKey: '',
   localBaseUrl: 'http://localhost:1234',
   localModelName: 'local-model'
 };
@@ -21,7 +22,7 @@ const App: React.FC = () => {
   const [analysis, setAnalysis] = useState<PromptAnalysis | null>(null);
   const [status, setStatus] = useState<LoadingState>(LoadingState.IDLE);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  
+
   // Settings State
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
@@ -65,7 +66,7 @@ const App: React.FC = () => {
       prompt,
       analysis: result
     };
-    
+
     const updatedHistory = [newItem, ...history];
     setHistory(updatedHistory);
     localStorage.setItem('promtify_history', JSON.stringify(updatedHistory));
@@ -113,7 +114,7 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-900 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-800 via-slate-900 to-slate-950 text-slate-50 selection:bg-purple-500/30 selection:text-purple-200 relative overflow-x-hidden">
-      
+
       {/* Animated Background */}
       <BackgroundAnimation />
 
@@ -132,9 +133,9 @@ const App: React.FC = () => {
               PROMPTLY
             </span>
           </div>
-          
+
           <div className="flex items-center gap-2">
-            <button 
+            <button
               onClick={() => setIsSettingsOpen(true)}
               className="p-2 text-slate-400 hover:text-white transition-colors rounded-lg hover:bg-slate-800/50"
               title="Settings"
@@ -142,7 +143,7 @@ const App: React.FC = () => {
               <Settings className="w-5 h-5" />
             </button>
 
-            <button 
+            <button
               onClick={() => setIsHistoryOpen(true)}
               className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors px-3 py-2 rounded-lg hover:bg-slate-800/50"
             >
@@ -159,7 +160,7 @@ const App: React.FC = () => {
       </header>
 
       {/* Settings Modal */}
-      <SettingsModal 
+      <SettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
         settings={settings}
@@ -167,9 +168,9 @@ const App: React.FC = () => {
       />
 
       {/* History Sidebar */}
-      <HistorySidebar 
-        isOpen={isHistoryOpen} 
-        onClose={() => setIsHistoryOpen(false)} 
+      <HistorySidebar
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
         history={history}
         onSelect={handleSelectHistory}
         onClear={handleClearHistory}
@@ -177,12 +178,12 @@ const App: React.FC = () => {
 
       {/* Main Content - Added relative and z-10 to sit above canvas */}
       <main className="pt-24 pb-12 px-4 max-w-7xl mx-auto relative z-10">
-        
+
         {/* Hero Section */}
         <div className={`transition-all duration-700 ease-in-out ${analysis ? 'opacity-0 h-0 overflow-hidden py-0' : 'opacity-100 py-12'}`}>
           <div className="text-center max-w-3xl mx-auto space-y-6">
             <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight text-white mb-4">
-              Master the Art of <br/>
+              Master the Art of <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-indigo-400">Prompt Engineering</span>
             </h1>
             <p className="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto">
@@ -202,17 +203,17 @@ const App: React.FC = () => {
                 placeholder="Paste your prompt here (e.g., 'Write a blog about coffee')..."
                 className="w-full h-32 md:h-40 bg-transparent text-lg text-white placeholder:text-slate-500 p-4 rounded-xl border-none outline-none resize-none font-mono leading-relaxed focus:ring-0"
               />
-              
+
               <div className="absolute bottom-3 right-3 flex items-center gap-3">
-                 <span className="hidden md:block text-xs text-slate-500 font-medium">
+                <span className="hidden md:block text-xs text-slate-500 font-medium">
                   Ctrl + Enter to analyze
                 </span>
                 <button
                   type="submit"
                   disabled={status === LoadingState.LOADING || !inputPrompt.trim()}
                   className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-semibold text-white transition-all shadow-lg 
-                    ${status === LoadingState.LOADING 
-                      ? 'bg-slate-700 cursor-not-allowed opacity-80' 
+                    ${status === LoadingState.LOADING
+                      ? 'bg-slate-700 cursor-not-allowed opacity-80'
                       : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 hover:shadow-indigo-500/25 active:scale-95'
                     }`}
                 >
@@ -231,12 +232,12 @@ const App: React.FC = () => {
               </div>
             </form>
           </div>
-          
+
           {/* Active Provider Badge */}
           <div className="flex justify-center mt-4">
-             <span className="text-xs font-medium text-slate-500 bg-slate-900/50 px-3 py-1 rounded-full border border-slate-800">
-               Using: <span className="text-slate-300 capitalize">{settings.provider}</span>
-             </span>
+            <span className="text-xs font-medium text-slate-500 bg-slate-900/50 px-3 py-1 rounded-full border border-slate-800">
+              Using: <span className="text-slate-300 capitalize">{settings.provider}</span>
+            </span>
           </div>
         </div>
 
@@ -245,8 +246,8 @@ const App: React.FC = () => {
           <div className="max-w-3xl mx-auto mt-12 space-y-8 animate-pulse">
             <div className="h-40 bg-slate-800/50 rounded-3xl"></div>
             <div className="grid grid-cols-2 gap-6">
-               <div className="h-64 bg-slate-800/50 rounded-2xl"></div>
-               <div className="h-64 bg-slate-800/50 rounded-2xl"></div>
+              <div className="h-64 bg-slate-800/50 rounded-2xl"></div>
+              <div className="h-64 bg-slate-800/50 rounded-2xl"></div>
             </div>
           </div>
         )}
@@ -263,8 +264,8 @@ const App: React.FC = () => {
         )}
       </main>
 
-       {/* Footer */}
-       <footer className="py-8 text-center text-slate-600 text-sm relative z-10">
+      {/* Footer */}
+      <footer className="py-8 text-center text-slate-600 text-sm relative z-10">
         <p>© {new Date().getFullYear()} PROMPTLY. Powered by Google Gemini.</p>
       </footer>
     </div>
