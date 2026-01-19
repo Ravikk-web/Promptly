@@ -45,8 +45,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings
     setLocalSettings(prev => ({ ...prev, [key]: value }));
     // Reset validation when url changes
     if (key === 'localBaseUrl') {
-        setValidationStatus('idle');
-        setValidationMsg('');
+      setValidationStatus('idle');
+      setValidationMsg('');
     }
   };
 
@@ -56,63 +56,63 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings
     setIsValidating(true);
     setValidationStatus('idle');
     setValidationMsg('');
-    
+
     // Remove trailing slash
-    let baseUrl = localSettings.localBaseUrl.replace(/\/$/, ''); 
-    
+    let baseUrl = localSettings.localBaseUrl.replace(/\/$/, '');
+
     // Construct check URL. 
     // The service appends /v1/chat/completions, so we expect the input to be the root or base.
     // Standard LM Studio / OpenAI endpoints usually expose /v1/models.
-    
+
     let checkUrl = `${baseUrl}/v1/models`;
-    
+
     // If the user already included /v1, we shouldn't double it (e.g. localhost:1234/v1/v1/models)
     if (baseUrl.endsWith('/v1')) {
-        checkUrl = `${baseUrl}/models`;
+      checkUrl = `${baseUrl}/models`;
     }
 
     try {
-        const response = await fetch(checkUrl, {
-             method: 'GET',
-             headers: { 'Content-Type': 'application/json' }
-        });
+      const response = await fetch(checkUrl, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
 
-        if (response.ok) {
-             setValidationStatus('success');
-             setValidationMsg('Success! Handshake with server confirmed.');
-        } else {
-             throw new Error(`Server responded with ${response.status}`);
-        }
+      if (response.ok) {
+        setValidationStatus('success');
+        setValidationMsg('Success! Handshake with server confirmed.');
+      } else {
+        throw new Error(`Server responded with ${response.status}`);
+      }
     } catch (error: any) {
-        setValidationStatus('error');
-        if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
-             setValidationMsg('Connection refused. Ensure server is running and CORS is ON.');
-        } else {
-             setValidationMsg(error.message || 'Failed to connect.');
-        }
+      setValidationStatus('error');
+      if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+        setValidationMsg('Connection refused. Ensure server is running and CORS is ON.');
+      } else {
+        setValidationMsg(error.message || 'Failed to connect.');
+      }
     } finally {
-        setIsValidating(false);
+      setIsValidating(false);
     }
   };
 
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
       {/* Backdrop */}
-      <div 
+      <div
         className="absolute inset-0 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
         onClick={onClose}
       />
 
       {/* Modal */}
       <div className="relative w-full max-w-2xl bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-        
+
         {/* Header */}
         <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
           <div>
             <h2 className="text-xl font-bold text-white">AI Settings</h2>
             <p className="text-sm text-slate-400">Configure your model provider</p>
           </div>
-          <button 
+          <button
             onClick={onClose}
             className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
           >
@@ -121,7 +121,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings
         </div>
 
         <div className="flex flex-col md:flex-row h-[400px]">
-          
+
           {/* Sidebar Tabs */}
           <div className="w-full md:w-48 bg-slate-950/50 border-r border-slate-800 p-2 space-y-1">
             <button
@@ -156,7 +156,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings
 
           {/* Content Area */}
           <div className="flex-1 p-6 overflow-y-auto bg-slate-900">
-            
+
             {activeTab === AIProvider.GOOGLE && (
               <div className="space-y-4 animate-in fade-in duration-300">
                 <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 flex gap-3">
@@ -166,17 +166,23 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings
                     <p className="text-blue-300/80 text-xs mt-1">Uses the Google Gemini API optimized for this application.</p>
                   </div>
                 </div>
-                
+
                 <div>
                   <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
-                    API Key Status
+                    Google Gemini API Key
                   </label>
-                  <div className="flex items-center gap-2 p-3 bg-slate-950 border border-slate-800 rounded-lg text-slate-500">
-                    <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-                    <span className="text-sm">Managed by System Environment</span>
+                  <div className="relative">
+                    <Key className="absolute left-3 top-2.5 w-4 h-4 text-slate-500" />
+                    <input
+                      type="password"
+                      value={localSettings.googleKey}
+                      onChange={(e) => handleInputChange('googleKey', e.target.value)}
+                      placeholder="AIza..."
+                      className="w-full bg-slate-950 border border-slate-800 rounded-lg py-2 pl-10 pr-4 text-sm text-white placeholder:text-slate-600 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                    />
                   </div>
                   <p className="text-xs text-slate-500 mt-2">
-                    The API key is securely injected by the application environment. You do not need to configure this manually.
+                    Leave empty to use the system default (if configured).
                   </p>
                 </div>
               </div>
@@ -190,7 +196,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings
                   </label>
                   <div className="relative">
                     <Key className="absolute left-3 top-2.5 w-4 h-4 text-slate-500" />
-                    <input 
+                    <input
                       type="password"
                       value={localSettings.openAIKey}
                       onChange={(e) => handleInputChange('openAIKey', e.target.value)}
@@ -223,7 +229,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings
                   </label>
                   <div className="relative">
                     <Key className="absolute left-3 top-2.5 w-4 h-4 text-slate-500" />
-                    <input 
+                    <input
                       type="password"
                       value={localSettings.claudeKey}
                       onChange={(e) => handleInputChange('claudeKey', e.target.value)}
@@ -237,7 +243,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings
 
             {activeTab === AIProvider.LOCAL && (
               <div className="space-y-6 animate-in fade-in duration-300">
-                 <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-4 flex gap-3">
+                <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-4 flex gap-3">
                   <Server className="w-5 h-5 text-purple-400 flex-shrink-0" />
                   <div>
                     <h3 className="text-purple-200 font-semibold text-sm">Local / Custom API</h3>
@@ -246,7 +252,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings
                     </p>
                   </div>
                 </div>
-                
+
                 {/* CORS Hint for Local */}
                 <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-3 flex gap-2">
                   <AlertTriangle className="w-4 h-4 text-yellow-400 flex-shrink-0 mt-0.5" />
@@ -261,28 +267,28 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings
                     Base URL
                   </label>
                   <div className="flex gap-2">
-                    <input 
-                        type="text"
-                        value={localSettings.localBaseUrl}
-                        onChange={(e) => handleInputChange('localBaseUrl', e.target.value)}
-                        placeholder="http://localhost:1234"
-                        className="flex-1 bg-slate-950 border border-slate-800 rounded-lg py-2 px-4 text-sm text-white placeholder:text-slate-600 focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all font-mono"
+                    <input
+                      type="text"
+                      value={localSettings.localBaseUrl}
+                      onChange={(e) => handleInputChange('localBaseUrl', e.target.value)}
+                      placeholder="http://localhost:1234"
+                      className="flex-1 bg-slate-950 border border-slate-800 rounded-lg py-2 px-4 text-sm text-white placeholder:text-slate-600 focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all font-mono"
                     />
                     <button
-                        onClick={handleTestConnection}
-                        disabled={isValidating || !localSettings.localBaseUrl}
-                        className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-w-[3rem]"
-                        title="Validate Connection"
+                      onClick={handleTestConnection}
+                      disabled={isValidating || !localSettings.localBaseUrl}
+                      className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-w-[3rem]"
+                      title="Validate Connection"
                     >
-                        {isValidating ? <Loader2 className="w-4 h-4 animate-spin text-purple-400" /> : <Wifi className="w-4 h-4" />}
+                      {isValidating ? <Loader2 className="w-4 h-4 animate-spin text-purple-400" /> : <Wifi className="w-4 h-4" />}
                     </button>
                   </div>
                   {/* Validation Message */}
                   {validationStatus !== 'idle' && (
-                      <div className={`mt-2 text-xs flex items-center gap-2 animate-in fade-in duration-300 ${validationStatus === 'success' ? 'text-emerald-400' : 'text-red-400'}`}>
-                          {validationStatus === 'success' ? <Check className="w-3 h-3" /> : <AlertTriangle className="w-3 h-3" />}
-                          <span>{validationMsg}</span>
-                      </div>
+                    <div className={`mt-2 text-xs flex items-center gap-2 animate-in fade-in duration-300 ${validationStatus === 'success' ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {validationStatus === 'success' ? <Check className="w-3 h-3" /> : <AlertTriangle className="w-3 h-3" />}
+                      <span>{validationMsg}</span>
+                    </div>
                   )}
                   <p className="text-[10px] text-slate-600 mt-1 ml-1">
                     Example: http://localhost:1234 (without /v1)
@@ -293,7 +299,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings
                   <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
                     Model Name (Optional)
                   </label>
-                  <input 
+                  <input
                     type="text"
                     value={localSettings.localModelName}
                     onChange={(e) => handleInputChange('localModelName', e.target.value)}
@@ -309,19 +315,18 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings
 
         {/* Footer */}
         <div className="p-4 border-t border-slate-800 bg-slate-900/50 flex justify-end gap-3">
-          <button 
+          <button
             onClick={onClose}
             className="px-4 py-2 text-sm font-medium text-slate-300 hover:text-white transition-colors"
           >
             Cancel
           </button>
-          <button 
+          <button
             onClick={handleSave}
-            className={`flex items-center gap-2 px-6 py-2 rounded-lg text-sm font-bold text-white transition-all shadow-lg ${
-              isSaved 
-              ? 'bg-emerald-500 hover:bg-emerald-600' 
-              : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500'
-            }`}
+            className={`flex items-center gap-2 px-6 py-2 rounded-lg text-sm font-bold text-white transition-all shadow-lg ${isSaved
+                ? 'bg-emerald-500 hover:bg-emerald-600'
+                : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500'
+              }`}
           >
             {isSaved ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
             {isSaved ? 'Saved' : 'Save Changes'}

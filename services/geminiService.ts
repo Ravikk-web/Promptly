@@ -21,8 +21,8 @@ const analysisSchema: Schema = {
         type: Type.OBJECT,
         properties: {
           text: { type: Type.STRING },
-          type: { 
-            type: Type.STRING, 
+          type: {
+            type: Type.STRING,
             enum: ["neutral", "bad"],
             description: "Use 'bad' for vague, misleading, or weak parts. Use 'neutral' for the rest."
           },
@@ -38,8 +38,8 @@ const analysisSchema: Schema = {
         type: Type.OBJECT,
         properties: {
           text: { type: Type.STRING },
-          type: { 
-            type: Type.STRING, 
+          type: {
+            type: Type.STRING,
             enum: ["neutral", "good"],
             description: "Use 'good' for parts that add value, clarity, or structure. Use 'neutral' for the rest."
           },
@@ -79,7 +79,7 @@ export const analyzePrompt = async (promptText: string, settings?: AppSettings):
 
   switch (provider) {
     case AIProvider.GOOGLE:
-      return analyzeWithGoogle(promptText);
+      return analyzeWithGoogle(promptText, settings?.googleKey);
     case AIProvider.OPENAI:
       return analyzeWithOpenAI(promptText, settings!.openAIKey);
     case AIProvider.CLAUDE:
@@ -92,10 +92,11 @@ export const analyzePrompt = async (promptText: string, settings?: AppSettings):
 };
 
 // --- GOOGLE IMPLEMENTATION ---
-const analyzeWithGoogle = async (promptText: string): Promise<PromptAnalysis> => {
-  if (!process.env.API_KEY) throw new Error("Google API Key is missing from environment.");
+const analyzeWithGoogle = async (promptText: string, userKey?: string): Promise<PromptAnalysis> => {
+  const apiKey = userKey || process.env.API_KEY;
+  if (!apiKey) throw new Error("Google API Key is missing. Please configure it in settings.");
 
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey });
 
   try {
     const response = await ai.models.generateContent({
@@ -165,19 +166,19 @@ const callOpenAICompatible = async (url: string, apiKey: string, model: string, 
     const data = await response.json();
     let content = data.choices[0]?.message?.content;
     if (!content) throw new Error("Empty response from model.");
-    
+
     // Robust Parsing Logic for Local Models
-    
+
     // 1. Clean <think> tags (Common in DeepSeek/R1 models)
     content = content.replace(/<think>[\s\S]*?<\/think>/g, '');
 
     // 2. Clean Markdown code blocks if the model wraps the JSON
     content = content.replace(/```json\n?|\n?```/g, '');
-    
+
     // 3. Extract JSON object by finding the first '{' and last '}'
     const firstBrace = content.indexOf('{');
     const lastBrace = content.lastIndexOf('}');
-    
+
     if (firstBrace !== -1 && lastBrace !== -1) {
       content = content.substring(firstBrace, lastBrace + 1);
     }
@@ -186,7 +187,7 @@ const callOpenAICompatible = async (url: string, apiKey: string, model: string, 
   } catch (error: any) {
     console.error("Provider API Error:", error);
     if (error instanceof TypeError && error.message.includes("Failed to fetch")) {
-         throw new Error("Connection failed. Ensure the local server is running and 'CORS' is enabled in its settings (common issue with LM Studio/Ollama).");
+      throw new Error("Connection failed. Ensure the local server is running and 'CORS' is enabled in its settings (common issue with LM Studio/Ollama).");
     }
     throw new Error(error.message || "Failed to connect to AI Provider. Check your settings and keys.");
   }
@@ -217,10 +218,10 @@ const analyzeWithClaude = async (promptText: string, apiKey: string): Promise<Pr
     });
 
     if (!response.ok) {
-       // Handle CORS specifically or general errors
-       if (response.status === 0) throw new Error("CORS Error: Claude API does not allow direct browser access. Please use a proxy.");
-       const err = await response.text();
-       throw new Error(`Claude API Error: ${err}`);
+      // Handle CORS specifically or general errors
+      if (response.status === 0) throw new Error("CORS Error: Claude API does not allow direct browser access. Please use a proxy.");
+      const err = await response.text();
+      throw new Error(`Claude API Error: ${err}`);
     }
 
     const data = await response.json();
@@ -239,15 +240,15 @@ const analyzeWithClaude = async (promptText: string, apiKey: string): Promise<Pr
 
 // --- UTILS ---
 export const getStructuredJsonPrompt = async (promptText: string): Promise<string> => {
-    // This function defaults to Google for simplicity, or could handle settings if passed
-    // For now, we keep it using the environment key for stability
-    if (!process.env.API_KEY) throw new Error("API Key is missing.");
+  // This function defaults to Google for simplicity, or could handle settings if passed
+  // For now, we keep it using the environment key for stability
+  if (!process.env.API_KEY) throw new Error("API Key is missing.");
 
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: `Convert to JSON: "${promptText}"`,
-      config: { responseMimeType: "application/json" }
-    });
-    return response.text ?? "{}";
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const response = await ai.models.generateContent({
+    model: "gemini-3-flash-preview",
+    contents: `Convert to JSON: "${promptText}"`,
+    config: { responseMimeType: "application/json" }
+  });
+  return response.text ?? "{}";
 };
